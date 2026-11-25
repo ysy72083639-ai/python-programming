@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>🃏 PYTHON UNO WEB GAME</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Malgun Gothic', sans-serif; }
+  body {
+    background: radial-gradient(circle at center, #1b5e20 0%, #0d3311 100%);
+    color: white; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; overflow-x: hidden;
+  }
+  header {
+    background: rgba(0,0,0,0.45); padding: 14px 30px; display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  .title { font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #ffeb3b; text-shadow: 0 2px 4px rgba(0,0,0,0.6); }
+  .controls button {
+    background: #ff9800; border: none; color: #111; font-weight: bold; padding: 8px 16px; border-radius: 8px;
+    cursor: pointer; margin-left: 8px; transition: 0.2s; font-size: 14px;
+  }
+  .controls button:hover { transform: translateY(-2px); filter: brightness(1.1); }
+  .controls button.new-btn { background: #00e676; }
+
+  /* AI 영역 */
+  .ai-zone { text-align: center; padding: 18px 0 5px; }
+  .ai-badge {
+    display: inline-block; background: rgba(0,0,0,0.5); padding: 8px 20px; border-radius: 20px; font-size: 15px; font-weight: bold;
+  }
+  .ai-cards { display: flex; justify-content: center; gap: 6px; margin-top: 10px; height: 75px; }
+  .card-back {
+    width: 52px; height: 75px; background: linear-gradient(135deg, #212121, #424242);
+    border: 2px solid #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-weight: 900; color: #ff5252; font-size: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  }
+
+  /* 중앙 테이블 */
+  .table-center { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .board-piles { display: flex; align-items: center; gap: 35px; }
+  .draw-deck {
+    width: 110px; height: 155px; background: linear-gradient(135deg, #1a237e, #283593);
+    border: 4px solid white; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.6); transition: 0.2s; font-weight: bold;
+  }
+  .draw-deck:hover { transform: scale(1.06); }
+
+  /* 카드 디자인 */
+  .uno-card {
+    width: 110px; height: 155px; border-radius: 14px; border: 4px solid white; position: relative;
+    display: flex; align-items: center; justify-content: center; font-weight: 900;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.5); user-select: none; transition: all 0.2s ease;
+  }
+  .uno-card .inner-oval {
+    width: 82px; height: 118px; background: rgba(255,255,255,0.92); border-radius: 50%;
+    transform: rotate(-18deg); display: flex; align-items: center; justify-content: center;
+    font-size: 26px; text-align: center; line-height: 1.1; box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+  }
+  .uno-card .corner { position: absolute; font-size: 13px; color: white; text-shadow: 1px 1px 2px black; }
+  .uno-card .top-left { top: 6px; left: 8px; }
+  .uno-card .bottom-right { bottom: 6px; right: 8px; }
+
+  .Red { background: linear-gradient(135deg, #e53935, #b71c1c); }
+  .Red .inner-oval { color: #c62828; }
+  .Yellow { background: linear-gradient(135deg, #fdd835, #f57f17); }
+  .Yellow .inner-oval { color: #e65100; }
+  .Green { background: linear-gradient(135deg, #43a047, #1b5e20); }
+  .Green .inner-oval { color: #2e7d32; }
+  .Blue { background: linear-gradient(135deg, #1e88e5, #0d47a1); }
+  .Blue .inner-oval { color: #1565c0; }
+  .Wild { background: conic-gradient(#e53935 0deg 90deg, #1e88e5 90deg 180deg, #fdd835 180deg 270deg, #43a047 270deg 360deg); }
+  .Wild .inner-oval { color: #212121; font-size: 20px; }
+
+  .status-bar {
+    background: rgba(0,0,0,0.6); padding: 10px 26px; border-radius: 12px; font-size: 16px;
+    border: 1px solid rgba(255,255,255,0.2); text-align: center; min-width: 420px;
+  }
+  .color-dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; vertical-align: middle; margin-right: 6px; border: 2px solid white; }
+
+  /* 플레이어 손패 */
+  .player-zone { background: rgba(0,0,0,0.35); padding: 16px 20px 24px; text-align: center; }
+  .hand-cards { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .hand-cards .uno-card { width: 96px; height: 136px; opacity: 0.55; cursor: not-allowed; }
+  .hand-cards .uno-card .inner-oval { width: 70px; height: 102px; font-size: 22px; }
+  .hand-cards .uno-card.playable { opacity: 1; cursor: pointer; box-shadow: 0 0 18px rgba(255,235,59,0.85); }
+  .hand-cards .uno-card.playable:hover { transform: translateY(-16px) scale(1.06); z-index: 10; }
+
+  /* 모달 (닉네임 / 색상선택 / 랭킹) */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .modal-box {
+    background: #1e293b; padding: 28px; border-radius: 16px; width: 400px; text-align: center;
+    border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+  }
+  .modal-box h2 { margin-bottom: 16px; color: #ffeb3b; }
+  .modal-box input {
+    width: 85%; padding: 10px; border-radius: 8px; border: none; font-size: 16px; margin-bottom: 16px; text-align: center;
+  }
+  .color-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .color-btns button { padding: 14px; font-size: 16px; font-weight: bold; border: 2px solid white; border-radius: 10px; color: white; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+  th, td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">🃏 PYTHON UNO WEB EDITION</div>
+  <div class="controls">
+    <span id="player-info" style="margin-right:12px; font-weight:bold;">👤 Player1</span>
+    <button class="new-btn" onclick="startNewGame()">🔄 새 게임</button>
+    <button onclick="openRankings()">🏆 DB 랭킹</button>
+  </div>
+</header>
+
+<div class="ai-zone">
+  <div class="ai-badge" id="ai-status">🤖 컴퓨터 AI 남은 카드: 7장</div>
+  <div class="ai-cards" id="ai-cards"></div>
+</div>
+
+<div class="table-center">
+  <div class="board-piles">
+    <div class="draw-deck" onclick="drawCard()">
+      <div style="font-size:28px;">📥</div>
+      <div style="margin-top:6px;">카드 뽑기</div>
+      <div style="font-size:11px; opacity:0.8;">(DRAW)</div>
+    </div>
+    <div id="top-card-slot"></div>
+  </div>
+  <div class="status-bar">
+    <div style="margin-bottom:4px; font-size:14px;">
+      <span class="color-dot" id="color-dot"></span>
+      현재 적용 색상: <strong id="current-color-text">-</strong> | 턴: <strong id="turn-text">1</strong>
+    </div>
+    <div id="game-message">게임을 준비 중입니다...</div>
+  </div>
+</div>
+
+<div class="player-zone">
+  <div style="font-weight:bold; font-size:15px;" id="hand-title">🃏 내 손패 (불이 들어온 카드를 클릭하세요)</div>
+  <div class="hand-cards" id="user-hand"></div>
+</div>
+
+<!-- 시작 모달 -->
+<div class="modal-bg" id="start-modal">
+  <div class="modal-box">
+    <h2>🃏 UNO 웹 게임 입장</h2>
+    <p style="margin-bottom:12px; font-size:14px; color:#cbd5e1;">전적 DB에 기록될 닉네임을 입력하세요</p>
+    <input type="text" id="nickname-input" placeholder="닉네임 입력 (예: 이예성)" value="Player1">
+    <br>
+    <button style="background:#00e676; border:none; padding:10px 28px; border-radius:8px; font-weight:bold; font-size:16px; cursor:pointer;" onclick="confirmNickname()">게임 시작</button>
+  </div>
+</div>
+
+<!-- 와일드 색상 선택 모달 -->
+<div class="modal-bg hidden" id="color-modal">
+  <div class="modal-box">
+    <h2>🎨 변경할 색상 선택</h2>
+    <div class="color-btns">
+      <button style="background:#e53935;" onclick="submitWildColor('Red')">RED (빨강)</button>
+      <button style="background:#fdd835; color:#111;" onclick="submitWildColor('Yellow')">YELLOW (노랑)</button>
+      <button style="background:#43a047;" onclick="submitWildColor('Green')">GREEN (초록)</button>
+      <button style="background:#1e88e5;" onclick="submitWildColor('Blue')">BLUE (파랑)</button>
+    </div>
+  </div>
+</div>
+
+<!-- 랭킹 모달 -->
+<div class="modal-bg hidden" id="rank-modal">
+  <div class="modal-box" style="width:460px;">
+    <h2>🏆 명예의 전당 (SQLite3 DB)</h2>
+    <table>
+      <thead><tr><th>순위</th><th>닉네임</th><th>승</th><th>패</th><th>최소턴</th></tr></thead>
+      <tbody id="rank-tbody"></tbody>
+    </table>
+    <br>
+    <button style="background:#ff9800; border:none; padding:8px 24px; border-radius:8px; font-weight:bold; cursor:pointer;" onclick="document.getElementById('rank-modal').classList.add('hidden')">닫기</button>
+  </div>
+</div>
+
+<script>
+let pendingWildIndex = -1;
+let currentNickname = "Player1";
+
+function createCardHTML(card, playable = false, idx = -1) {
+  const clickAttr = playable ? `onclick="onCardClick(${idx}, '${card.color}')"` : "";
+  const playClass = playable ? "playable" : "";
+  return `
+    <div class="uno-card ${card.color} ${playClass}" ${clickAttr}>
+      <span class="corner top-left">${card.value}</span>
+      <div class="inner-oval">${card.value}</div>
+      <span class="corner bottom-right">${card.value}</span>
+    </div>
+  `;
+}
+
+function render(state) {
+  document.getElementById("player-info").innerText = `👤 ${state.nickname}`;
+  document.getElementById("turn-text").innerText = state.turn;
+  document.getElementById("current-color-text").innerText = state.current_color;
+  document.getElementById("game-message").innerText = state.message;
+
+  const dotColors = { Red: "#e53935", Yellow: "#fdd835", Green: "#43a047", Blue: "#1e88e5" };
+  document.getElementById("color-dot").style.background = dotColors[state.current_color] || "#fff";
+
+  // AI 카드 뒷면 렌더링
+  const unoAi = state.ai_count === 1 ? " 🔥[UNO!]" : "";
+  document.getElementById("ai-status").innerText = `🤖 컴퓨터 AI 남은 카드: ${state.ai_count}장${unoAi}`;
+  document.getElementById("ai-cards").innerHTML = Array(state.ai_count).fill('<div class="card-back">UNO</div>').join("");
+
+  // 바닥 카드
+  document.getElementById("top-card-slot").innerHTML = createCardHTML(state.top_card, false);
+
+  // 사용자 손패
+  const unoUser = state.user_hand.length === 1 ? " 🔥[UNO!]" : "";
+  document.getElementById("hand-title").innerText = `🃏 ${state.nickname}의 손패 (${state.user_hand.length}장)${unoUser}`;
+  document.getElementById("user-hand").innerHTML = state.user_hand
+    .map((c, i) => createCardHTML(c, c.playable, i))
+    .join("");
+}
+
+async function confirmNickname() {
+  currentNickname = document.getElementById("nickname-input").value.trim() || "Player1";
+  document.getElementById("start-modal").classList.add("hidden");
+  await startNewGame();
+}
+
+async function startNewGame() {
+  const res = await fetch("/api/start", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname: currentNickname })
+  });
+  render(await res.json());
+}
+
+async function onCardClick(idx, color) {
+  if (color === "Wild") {
+    pendingWildIndex = idx;
+    document.getElementById("color-modal").classList.remove("hidden");
+    return;
+  }
+  const res = await fetch("/api/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: idx })
+  });
+  render(await res.json());
+}
+
+async function submitWildColor(chosenColor) {
+  document.getElementById("color-modal").classList.add("hidden");
+  const res = await fetch("/api/play", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ index: pendingWildIndex, color: chosenColor })
+  });
+  render(await res.json());
+}
+
+async function drawCard() {
+  const res = await fetch("/api/draw", { method: "POST" });
+  render(await res.json());
+}
+
+async function openRankings() {
+  const res = await fetch("/api/rankings");
+  const rows = await res.json();
+  const tbody = document.getElementById("rank-tbody");
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5">아직 저장된 전적이 없습니다.</td></tr>';
+  } else {
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td>${i + 1}위</td>
+        <td>${r.nickname}</td>
+        <td>${r.wins}</td>
+        <td>${r.losses}</td>
+        <td>${r.min_turns < 999 ? r.min_turns + "턴" : "-"}</td>
+      </tr>
+    `).join("");
+  }
+  document.getElementById("rank-modal").classList.remove("hidden");
+}
+</script>
+</body>
+</html>
